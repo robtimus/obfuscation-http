@@ -40,6 +40,8 @@ import com.github.robtimus.obfuscation.support.ObfuscatorUtils.MapBuilder;
 /**
  * An obfuscator that obfuscates request parameters in {@link CharSequence CharSequences} or the contents of {@link Reader Readers}.
  * It can be used for both query strings and form data strings.
+ * <p>
+ * In addition to obfuscating request parameters in text, it can also obfuscate values from already-parsed request parameters.
  *
  * @author Rob Spoor
  */
@@ -115,6 +117,67 @@ public final class RequestParameterObfuscator extends Obfuscator {
     @Override
     public Writer streamTo(Appendable destination) {
         return new CachingObfuscatingWriter(this, destination);
+    }
+
+    /**
+     * Obfuscates the value of a parameter.
+     *
+     * @param name The name of the parameter to obfuscate.
+     * @param value The parameter value to obfuscate.
+     * @return The obfuscated parameter value.
+     * @throws NullPointerException If the given name or value is {@code null}.
+     */
+    public CharSequence obfuscateParameter(String name, String value) {
+        return obfuscator(name).obfuscateText(value);
+    }
+
+    /**
+     * Obfuscates the value of a parameter.
+     *
+     * @param name The name of the parameter to obfuscate.
+     * @param value The parameter value to obfuscate.
+     * @param destination The {@code StringBuilder} to append the obfuscated parameter value to.
+     * @throws NullPointerException If the given name, value or {@code StringBuilder} is {@code null}.
+     */
+    public void obfuscateParameter(String name, String value, StringBuilder destination) {
+        obfuscator(name).obfuscateText(value, destination);
+    }
+
+    /**
+     * Obfuscates the value of a parameter.
+     *
+     * @param name The name of the parameter to obfuscate.
+     * @param value The parameter value to obfuscate.
+     * @param destination The {@code StringBuffer} to append the obfuscated parameter value to.
+     * @throws NullPointerException If the given name, value or {@code StringBuffer} is {@code null}.
+     */
+    public void obfuscateParameter(String name, String value, StringBuffer destination) {
+        obfuscator(name).obfuscateText(value, destination);
+    }
+
+    /**
+     * Obfuscates the value of a parameter.
+     *
+     * @param name The name of the parameter to obfuscate.
+     * @param value The parameter value to obfuscate.
+     * @param destination The {@code Appendable} to append the obfuscated parameter value to.
+     * @throws NullPointerException If the given name, value or {@code Appendable} is {@code null}.
+     * @throws IOException If an I/O error occurs.
+     */
+    public void obfuscateParameter(String name, String value, Appendable destination) throws IOException {
+        obfuscator(name).obfuscateText(value, destination);
+    }
+
+    /**
+     * Returns an obfuscator for a parameter. This method can be used for cases where the other methods are not sufficient.
+     *
+     * @param name The name of the parameter to return an obfuscator for.
+     * @return A non-{@code null} obfuscator for the given parameter.
+     * @throws NullPointerException If the given name is {@code null}.
+     */
+    public Obfuscator obfuscator(String name) {
+        Objects.requireNonNull(name);
+        return obfuscators.getOrDefault(name, none());
     }
 
     @Override

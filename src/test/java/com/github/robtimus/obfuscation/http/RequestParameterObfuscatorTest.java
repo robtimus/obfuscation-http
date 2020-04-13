@@ -20,6 +20,7 @@ package com.github.robtimus.obfuscation.http;
 import static com.github.robtimus.obfuscation.Obfuscator.all;
 import static com.github.robtimus.obfuscation.http.RequestParameterObfuscator.builder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import com.github.robtimus.obfuscation.Obfuscated;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.http.RequestParameterObfuscator.Builder;
 
@@ -287,6 +289,58 @@ public class RequestParameterObfuscatorTest {
         }
     }
 
+    @ParameterizedTest(name = "{0}: {1} -> {2}")
+    @MethodSource("testData")
+    @DisplayName("obfuscateParameter(String, String)")
+    public void testObfuscateParameterCharSequence(String name, String value, String expected) {
+        RequestParameterObfuscator obfuscator = createObfuscator();
+        assertEquals(expected, obfuscator.obfuscateParameter(name, value).toString());
+    }
+
+    @ParameterizedTest(name = "{0}: {1} -> {2}")
+    @MethodSource("testData")
+    @DisplayName("obfuscateParameter(String, String, StringBuilder)")
+    public void testObfuscateParameterCharSequenceToStringBuilder(String name, String value, String expected) {
+        RequestParameterObfuscator obfuscator = createObfuscator();
+
+        StringBuilder sb = new StringBuilder();
+        obfuscator.obfuscateParameter(name, value, sb);
+        assertEquals(expected, sb.toString());
+    }
+
+    @ParameterizedTest(name = "{0}: {1} -> {2}")
+    @MethodSource("testData")
+    @DisplayName("obfuscateParameter(String, String, StringBuffer)")
+    public void testObfuscateParameterCharSequenceToStringBuffer(String name, String value, String expected) {
+        RequestParameterObfuscator obfuscator = createObfuscator();
+
+        StringBuffer sb = new StringBuffer();
+        obfuscator.obfuscateParameter(name, value, sb);
+        assertEquals(expected, sb.toString());
+    }
+
+    @ParameterizedTest(name = "{0}: {1} -> {2}")
+    @MethodSource("testData")
+    @DisplayName("obfuscateParameter(String, String, Appendable)")
+    public void testObfuscateParameterCharSequenceToAppendable(String name, String value, String expected) throws IOException {
+        RequestParameterObfuscator obfuscator = createObfuscator();
+
+        Writer writer = new StringWriter();
+        obfuscator.obfuscateParameter(name, value, writer);
+        assertEquals(expected, writer.toString());
+    }
+
+    @ParameterizedTest(name = "{0}: {1} -> {2}")
+    @MethodSource("testData")
+    @DisplayName("obfuscator(String)")
+    public void testObfuscator(String name, String value, String expected) {
+        RequestParameterObfuscator obfuscator = createObfuscator();
+
+        Obfuscated<String> obfuscated = obfuscator.obfuscator(name).obfuscateObject(value);
+        assertEquals(expected, obfuscated.toString());
+        assertSame(value, obfuscated.value());
+    }
+
     @ParameterizedTest(name = "{1}")
     @MethodSource
     @DisplayName("equals(Object)")
@@ -332,15 +386,24 @@ public class RequestParameterObfuscatorTest {
         }
     }
 
-    private Obfuscator createObfuscator() {
+    Arguments[] testData() {
+        return new Arguments[] {
+                arguments("foo", "bar", "***"),
+                arguments("Foo", "bar", "bar"),
+                arguments("hello", "world", "world"),
+                arguments("no-value", "", ""),
+        };
+    }
+
+    private RequestParameterObfuscator createObfuscator() {
         return createObfuscator(builder());
     }
 
-    private Obfuscator createObfuscator(Charset encoding) {
+    private RequestParameterObfuscator createObfuscator(Charset encoding) {
         return createObfuscator(builder().withEncoding(encoding));
     }
 
-    private Obfuscator createObfuscator(Builder builder) {
+    private RequestParameterObfuscator createObfuscator(Builder builder) {
         Obfuscator obfuscator = all();
         return builder
                 .withParameter("foo", obfuscator)

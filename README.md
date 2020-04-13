@@ -6,7 +6,7 @@ Provides functionality for obfuscating HTTP requests and responses. This can be 
 
 To create a request parameter obfuscator, simply create a builder, add parameters to it, and let it build the final obfuscator:
 
-    Obfuscator obfuscator = RequestParameterObfuscator.builder()
+    RequestParameterObfuscator obfuscator = RequestParameterObfuscator.builder()
             .withParameter("password", Obfuscator.fixedLength(3))
             .build();
 
