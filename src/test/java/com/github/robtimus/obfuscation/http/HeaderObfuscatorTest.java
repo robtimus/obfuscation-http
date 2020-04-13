@@ -98,6 +98,32 @@ public class HeaderObfuscatorTest {
         assertSame(value, obfuscated.value());
     }
 
+    @ParameterizedTest(name = "{1}")
+    @MethodSource
+    @DisplayName("equals(Object)")
+    public void testEquals(HeaderObfuscator obfuscator, Object object, boolean expected) {
+        assertEquals(expected, obfuscator.equals(object));
+    }
+
+    Arguments[] testEquals() {
+        HeaderObfuscator obfuscator = createObfuscator();
+        return new Arguments[] {
+                arguments(obfuscator, obfuscator, true),
+                arguments(obfuscator, null, false),
+                arguments(obfuscator, createObfuscator(), true),
+                arguments(obfuscator, builder().build(), false),
+                arguments(obfuscator, "foo", false),
+        };
+    }
+
+    @Test
+    @DisplayName("hashCode()")
+    public void testHashCode() {
+        HeaderObfuscator obfuscator = createObfuscator();
+        assertEquals(obfuscator.hashCode(), obfuscator.hashCode());
+        assertEquals(obfuscator.hashCode(), createObfuscator().hashCode());
+    }
+
     @Nested
     @DisplayName("Builder")
     public class BuilderTest {

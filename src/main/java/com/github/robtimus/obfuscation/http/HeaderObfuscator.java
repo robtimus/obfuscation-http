@@ -101,6 +101,31 @@ public final class HeaderObfuscator {
         return obfuscators.getOrDefault(name, none());
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || o.getClass() != getClass()) {
+            return false;
+        }
+        HeaderObfuscator other = (HeaderObfuscator) o;
+        return obfuscators.equals(other.obfuscators);
+    }
+
+    @Override
+    public int hashCode() {
+        return obfuscators.hashCode();
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String toString() {
+        return getClass().getName()
+                + "[obfuscators=" + obfuscators
+                + "]";
+    }
+
     /**
      * Returns a builder that will create {@code HeaderObfuscators}.
      *
