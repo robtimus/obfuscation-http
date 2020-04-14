@@ -19,13 +19,12 @@ package com.github.robtimus.obfuscation.http;
 
 import static com.github.robtimus.obfuscation.Obfuscator.none;
 import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_INSENSITIVE;
-import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.map;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import com.github.robtimus.obfuscation.Obfuscator;
-import com.github.robtimus.obfuscation.support.ObfuscatorUtils.MapBuilder;
+import com.github.robtimus.obfuscation.support.MapBuilder;
 
 /**
  * An object that will obfuscate header values.
@@ -145,7 +144,7 @@ public final class HeaderObfuscator {
         private final MapBuilder<Obfuscator> obfuscators;
 
         private Builder() {
-            obfuscators = map();
+            obfuscators = new MapBuilder<>();
         }
 
         /**

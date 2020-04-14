@@ -17,10 +17,8 @@
 
 package com.github.robtimus.obfuscation.http;
 
-import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_SENSITIVE;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.checkStartAndEnd;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.indexOf;
-import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.map;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -35,7 +33,7 @@ import java.util.function.Function;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.support.CachingObfuscatingWriter;
 import com.github.robtimus.obfuscation.support.CaseSensitivity;
-import com.github.robtimus.obfuscation.support.ObfuscatorUtils.MapBuilder;
+import com.github.robtimus.obfuscation.support.MapBuilder;
 
 /**
  * An obfuscator that obfuscates request parameters in {@link CharSequence CharSequences} or the contents of {@link Reader Readers}.
@@ -228,14 +226,14 @@ public final class RequestParameterObfuscator extends Obfuscator {
         private Charset encoding;
 
         private Builder() {
-            obfuscators = map();
+            obfuscators = new MapBuilder<>();
             encoding = StandardCharsets.UTF_8;
         }
 
         /**
          * Adds a parameter to obfuscate.
-         * This method is an alias for
-         * {@link #withParameter(String, Obfuscator, CaseSensitivity) withParameter(parameter, obfuscator, CASE_SENSITIVE)}.
+         * This method is an alias for {@link #withParameter(String, Obfuscator, CaseSensitivity)} with the last specified default case sensitivity
+         * using {@link #caseSensitiveByDefault()} or {@link #caseInsensitiveByDefault()}. The default is {@link CaseSensitivity#CASE_SENSITIVE}.
          *
          * @param parameter The name of the parameter. It will be treated case sensitively.
          * @param obfuscator The obfuscator to use for obfuscating the parameter.
@@ -244,7 +242,8 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @throws IllegalArgumentException If a parameter with the same name and the same case sensitivity was already added.
          */
         public Builder withParameter(String parameter, Obfuscator obfuscator) {
-            return withParameter(parameter, obfuscator, CASE_SENSITIVE);
+            obfuscators.withEntry(parameter, obfuscator);
+            return this;
         }
 
         /**
@@ -259,6 +258,30 @@ public final class RequestParameterObfuscator extends Obfuscator {
          */
         public Builder withParameter(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
             obfuscators.withEntry(parameter, obfuscator, caseSensitivity);
+            return this;
+        }
+
+        /**
+         * Sets the default case sensitivity for new parameters to {@link CaseSensitivity#CASE_SENSITIVE}. This is the default setting.
+         * <p>
+         * Note that this will not change the case sensitivity of any parameters that was already added.
+         *
+         * @return This object.
+         */
+        public Builder caseSensitiveByDefault() {
+            obfuscators.caseSensitiveByDefault();
+            return this;
+        }
+
+        /**
+         * Sets the default case sensitivity for new parameters to {@link CaseSensitivity#CASE_INSENSITIVE}.
+         * <p>
+         * Note that this will not change the case sensitivity of any parameter that was already added.
+         *
+         * @return This object.
+         */
+        public Builder caseInsensitiveByDefault() {
+            obfuscators.caseInsensitiveByDefault();
             return this;
         }
 
