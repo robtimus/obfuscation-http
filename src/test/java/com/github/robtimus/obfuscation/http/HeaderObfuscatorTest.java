@@ -93,7 +93,7 @@ public class HeaderObfuscatorTest {
     public void testObfuscator(String name, String value, String expected) {
         HeaderObfuscator obfuscator = createObfuscator();
 
-        Obfuscated<String> obfuscated = obfuscator.obfuscator(name).obfuscateObject(value);
+        Obfuscated<String> obfuscated = obfuscator.obfuscateHeaderValue(name, value);
         assertEquals(expected, obfuscated.toString());
         assertSame(value, obfuscated.value());
     }

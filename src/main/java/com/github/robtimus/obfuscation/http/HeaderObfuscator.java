@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import com.github.robtimus.obfuscation.Obfuscated;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.support.MapBuilder;
 
@@ -89,13 +90,18 @@ public final class HeaderObfuscator {
     }
 
     /**
-     * Returns an obfuscator for a header. This method can be used for cases where the other methods are not sufficient.
+     * Obfuscates the value of a header.
      *
-     * @param name The name of the header to return an obfuscator for.
-     * @return A non-{@code null} obfuscator for the given header.
-     * @throws NullPointerException If the given name is {@code null}.
+     * @param name The name of the header to obfuscate.
+     * @param value The header value to obfuscate.
+     * @return An {@code Obfuscated} wrapper around the given value.
+     * @throws NullPointerException If the given name or value is {@code null}.
      */
-    public Obfuscator obfuscator(String name) {
+    public Obfuscated<String> obfuscateHeaderValue(String name, String value) {
+        return obfuscator(name).obfuscateObject(value);
+    }
+
+    private Obfuscator obfuscator(String name) {
         Objects.requireNonNull(name);
         return obfuscators.getOrDefault(name, none());
     }

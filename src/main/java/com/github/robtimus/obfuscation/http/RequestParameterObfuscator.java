@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import com.github.robtimus.obfuscation.Obfuscated;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.support.CachingObfuscatingWriter;
 import com.github.robtimus.obfuscation.support.CaseSensitivity;
@@ -167,13 +168,18 @@ public final class RequestParameterObfuscator extends Obfuscator {
     }
 
     /**
-     * Returns an obfuscator for a parameter. This method can be used for cases where the other methods are not sufficient.
+     * Obfuscates the value of a parameter.
      *
-     * @param name The name of the parameter to return an obfuscator for.
-     * @return A non-{@code null} obfuscator for the given parameter.
-     * @throws NullPointerException If the given name is {@code null}.
+     * @param name The name of the parameter to obfuscate.
+     * @param value The parameter value to obfuscate.
+     * @return An {@code Obfuscated} wrapper around the given value.
+     * @throws NullPointerException If the given name or value is {@code null}.
      */
-    public Obfuscator obfuscator(String name) {
+    public Obfuscated<String> obfuscateParameterValue(String name, String value) {
+        return obfuscator(name).obfuscateObject(value);
+    }
+
+    private Obfuscator obfuscator(String name) {
         Objects.requireNonNull(name);
         return obfuscators.getOrDefault(name, none());
     }

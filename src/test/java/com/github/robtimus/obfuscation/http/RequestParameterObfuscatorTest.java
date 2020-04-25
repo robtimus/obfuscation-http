@@ -339,10 +339,10 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscator(String)")
-        public void testObfuscator(String name, String value, String expected) {
+        public void testObfuscateParameterValue(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseSensitiveByDefault());
 
-            Obfuscated<String> obfuscated = obfuscator.obfuscator(name).obfuscateObject(value);
+            Obfuscated<String> obfuscated = obfuscator.obfuscateParameterValue(name, value);
             assertEquals(expected, obfuscated.toString());
             assertSame(value, obfuscated.value());
         }
@@ -409,7 +409,7 @@ public class RequestParameterObfuscatorTest {
         public void testObfuscator(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseInsensitiveByDefault());
 
-            Obfuscated<String> obfuscated = obfuscator.obfuscator(name).obfuscateObject(value);
+            Obfuscated<String> obfuscated = obfuscator.obfuscateParameterValue(name, value);
             assertEquals(expected, obfuscated.toString());
             assertSame(value, obfuscated.value());
         }
