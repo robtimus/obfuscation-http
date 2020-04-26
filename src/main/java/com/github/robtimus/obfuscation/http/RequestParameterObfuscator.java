@@ -270,7 +270,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
         /**
          * Sets the default case sensitivity for new parameters to {@link CaseSensitivity#CASE_SENSITIVE}. This is the default setting.
          * <p>
-         * Note that this will not change the case sensitivity of any parameters that was already added.
+         * Note that this will not change the case sensitivity of any parameter that was already added.
          *
          * @return This object.
          */
