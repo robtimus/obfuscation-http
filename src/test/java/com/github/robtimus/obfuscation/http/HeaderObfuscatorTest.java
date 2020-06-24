@@ -42,14 +42,14 @@ import com.github.robtimus.obfuscation.Obfuscated;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.http.HeaderObfuscator.Builder;
 
-@SuppressWarnings({ "javadoc", "nls" })
+@SuppressWarnings("nls")
 @TestInstance(Lifecycle.PER_CLASS)
-public class HeaderObfuscatorTest {
+class HeaderObfuscatorTest {
 
     @ParameterizedTest(name = "{0}: {1} -> {2}")
     @MethodSource("testData")
     @DisplayName("obfuscateHeader(String, String)")
-    public void testObfuscateHeaderCharSequence(String name, String value, String expected) {
+    void testObfuscateHeaderCharSequence(String name, String value, String expected) {
         HeaderObfuscator obfuscator = createObfuscator();
         assertEquals(expected, obfuscator.obfuscateHeader(name, value).toString());
     }
@@ -57,7 +57,7 @@ public class HeaderObfuscatorTest {
     @ParameterizedTest(name = "{0}: {1} -> {2}")
     @MethodSource("testData")
     @DisplayName("obfuscateHeader(String, String, StringBuilder)")
-    public void testObfuscateHeaderCharSequenceToStringBuilder(String name, String value, String expected) {
+    void testObfuscateHeaderCharSequenceToStringBuilder(String name, String value, String expected) {
         HeaderObfuscator obfuscator = createObfuscator();
 
         StringBuilder sb = new StringBuilder();
@@ -68,7 +68,7 @@ public class HeaderObfuscatorTest {
     @ParameterizedTest(name = "{0}: {1} -> {2}")
     @MethodSource("testData")
     @DisplayName("obfuscateHeader(String, String, StringBuffer)")
-    public void testObfuscateHeaderCharSequenceToStringBuffer(String name, String value, String expected) {
+    void testObfuscateHeaderCharSequenceToStringBuffer(String name, String value, String expected) {
         HeaderObfuscator obfuscator = createObfuscator();
 
         StringBuffer sb = new StringBuffer();
@@ -79,7 +79,7 @@ public class HeaderObfuscatorTest {
     @ParameterizedTest(name = "{0}: {1} -> {2}")
     @MethodSource("testData")
     @DisplayName("obfuscateHeader(String, String, Appendable)")
-    public void testObfuscateHeaderCharSequenceToAppendable(String name, String value, String expected) throws IOException {
+    void testObfuscateHeaderCharSequenceToAppendable(String name, String value, String expected) throws IOException {
         HeaderObfuscator obfuscator = createObfuscator();
 
         Writer writer = new StringWriter();
@@ -90,7 +90,7 @@ public class HeaderObfuscatorTest {
     @ParameterizedTest(name = "{0}: {1} -> {2}")
     @MethodSource("testData")
     @DisplayName("obfuscator(String)")
-    public void testObfuscator(String name, String value, String expected) {
+    void testObfuscator(String name, String value, String expected) {
         HeaderObfuscator obfuscator = createObfuscator();
 
         Obfuscated<String> obfuscated = obfuscator.obfuscateHeaderValue(name, value);
@@ -101,7 +101,7 @@ public class HeaderObfuscatorTest {
     @ParameterizedTest(name = "{1}")
     @MethodSource
     @DisplayName("equals(Object)")
-    public void testEquals(HeaderObfuscator obfuscator, Object object, boolean expected) {
+    void testEquals(HeaderObfuscator obfuscator, Object object, boolean expected) {
         assertEquals(expected, obfuscator.equals(object));
     }
 
@@ -118,7 +118,7 @@ public class HeaderObfuscatorTest {
 
     @Test
     @DisplayName("hashCode()")
-    public void testHashCode() {
+    void testHashCode() {
         HeaderObfuscator obfuscator = createObfuscator();
         assertEquals(obfuscator.hashCode(), obfuscator.hashCode());
         assertEquals(obfuscator.hashCode(), createObfuscator().hashCode());
@@ -126,11 +126,11 @@ public class HeaderObfuscatorTest {
 
     @Nested
     @DisplayName("Builder")
-    public class BuilderTest {
+    class BuilderTest {
 
         @Test
         @DisplayName("transform")
-        public void testTransform() {
+        void testTransform() {
             Builder builder = builder();
             @SuppressWarnings("unchecked")
             Function<Builder, String> f = mock(Function.class);

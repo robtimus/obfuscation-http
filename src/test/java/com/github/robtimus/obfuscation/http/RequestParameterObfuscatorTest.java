@@ -20,6 +20,7 @@ package com.github.robtimus.obfuscation.http;
 import static com.github.robtimus.obfuscation.Obfuscator.all;
 import static com.github.robtimus.obfuscation.http.RequestParameterObfuscator.builder;
 import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_SENSITIVE;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,13 +50,13 @@ import com.github.robtimus.obfuscation.Obfuscated;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.http.RequestParameterObfuscator.Builder;
 
-@SuppressWarnings({ "javadoc", "nls" })
+@SuppressWarnings("nls")
 @TestInstance(Lifecycle.PER_CLASS)
-public class RequestParameterObfuscatorTest {
+class RequestParameterObfuscatorTest {
 
     @Test
     @DisplayName("obfuscateText(CharSequence, int, int)")
-    public void testObfuscateTextCharSequence() {
+    void testObfuscateTextCharSequence() {
         String input = "xfoo=bar&hello=world&no-valuey";
         String expected = "foo=***&hello=world&no-value";
 
@@ -68,7 +69,7 @@ public class RequestParameterObfuscatorTest {
 
     @Test
     @DisplayName("obfuscateText(CharSequence, int, int, Appendable)")
-    public void testObfuscateTextCharSequenceToAppendable() throws IOException {
+    void testObfuscateTextCharSequenceToAppendable() throws IOException {
         String input = "xfoo=bar&hello=world&no-valuey";
         String expected = "foo=***&hello=world&no-value";
 
@@ -81,7 +82,7 @@ public class RequestParameterObfuscatorTest {
 
     @Test
     @DisplayName("obfuscateText(Reader, Appendable)")
-    public void testObfuscateTextReaderToAppendable() throws IOException {
+    void testObfuscateTextReaderToAppendable() throws IOException {
         String input = "foo=bar&hello=world&no-value";
         String expected = "foo=***&hello=world&no-value";
 
@@ -99,12 +100,12 @@ public class RequestParameterObfuscatorTest {
     @Nested
     @TestInstance(Lifecycle.PER_CLASS)
     @DisplayName("streamTo(Appendable)")
-    public class StreamTo {
+    class StreamTo {
 
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("write(int)")
-        public void testWriteInt(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
+        void testWriteInt(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
             Obfuscator obfuscator = createObfuscator();
 
             String input = "foo=bar&hello=world&no-value";
@@ -122,7 +123,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("write(char[])")
-        public void testWriteCharArray(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
+        void testWriteCharArray(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
                 throws IOException {
 
             Obfuscator obfuscator = createObfuscator();
@@ -140,7 +141,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("write(char[], int, int)")
-        public void testWriteCharArrayRange(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
+        void testWriteCharArrayRange(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
                 throws IOException {
 
             Obfuscator obfuscator = createObfuscator();
@@ -169,7 +170,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("write(String)")
-        public void testWriteString(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
+        void testWriteString(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
             Obfuscator obfuscator = createObfuscator();
 
             String input = "foo=bar&hello=world&no-value";
@@ -185,7 +186,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("write(String, int, int)")
-        public void testWriteStringRange(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
+        void testWriteStringRange(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
                 throws IOException {
 
             Obfuscator obfuscator = createObfuscator();
@@ -208,7 +209,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("append(CharSequence)")
-        public void testAppendCharSequence(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
+        void testAppendCharSequence(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
                 throws IOException {
 
             Obfuscator obfuscator = createObfuscator();
@@ -226,7 +227,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("append(CharSequence, int, int)")
-        public void testAppendCharSequenceRange(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
+        void testAppendCharSequenceRange(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier)
                 throws IOException {
 
             Obfuscator obfuscator = createObfuscator();
@@ -254,7 +255,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("append(char)")
-        public void testAppendChar(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
+        void testAppendChar(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
             Obfuscator obfuscator = createObfuscator();
 
             String input = "foo=bar&hello=world&no-value";
@@ -272,12 +273,12 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("appendableArguments")
         @DisplayName("flush()")
-        public void testFlush(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
+        void testFlush(@SuppressWarnings("unused") String appendableType, Supplier<Appendable> destinationSupplier) throws IOException {
             Obfuscator obfuscator = createObfuscator();
 
             Appendable destination = destinationSupplier.get();
             try (Writer w = obfuscator.streamTo(destination)) {
-                w.flush();
+                assertDoesNotThrow(w::flush);
             }
         }
 
@@ -293,12 +294,12 @@ public class RequestParameterObfuscatorTest {
     @Nested
     @TestInstance(Lifecycle.PER_CLASS)
     @DisplayName("case sensitive")
-    public class CaseSensitive {
+    class CaseSensitive {
 
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String)")
-        public void testObfuscateParameterCharSequence(String name, String value, String expected) {
+        void testObfuscateParameterCharSequence(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseSensitiveByDefault());
             assertEquals(expected, obfuscator.obfuscateParameter(name, value).toString());
         }
@@ -306,7 +307,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String, StringBuilder)")
-        public void testObfuscateParameterCharSequenceToStringBuilder(String name, String value, String expected) {
+        void testObfuscateParameterCharSequenceToStringBuilder(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseSensitiveByDefault());
 
             StringBuilder sb = new StringBuilder();
@@ -317,7 +318,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String, StringBuffer)")
-        public void testObfuscateParameterCharSequenceToStringBuffer(String name, String value, String expected) {
+        void testObfuscateParameterCharSequenceToStringBuffer(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseSensitiveByDefault());
 
             StringBuffer sb = new StringBuffer();
@@ -328,7 +329,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String, Appendable)")
-        public void testObfuscateParameterCharSequenceToAppendable(String name, String value, String expected) throws IOException {
+        void testObfuscateParameterCharSequenceToAppendable(String name, String value, String expected) throws IOException {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseSensitiveByDefault());
 
             Writer writer = new StringWriter();
@@ -339,7 +340,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscator(String)")
-        public void testObfuscateParameterValue(String name, String value, String expected) {
+        void testObfuscateParameterValue(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseSensitiveByDefault());
 
             Obfuscated<String> obfuscated = obfuscator.obfuscateParameterValue(name, value);
@@ -360,12 +361,12 @@ public class RequestParameterObfuscatorTest {
     @Nested
     @TestInstance(Lifecycle.PER_CLASS)
     @DisplayName("case insensitive")
-    public class CaseInsensitive {
+    class CaseInsensitive {
 
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String)")
-        public void testObfuscateParameterCharSequence(String name, String value, String expected) {
+        void testObfuscateParameterCharSequence(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseInsensitiveByDefault());
             assertEquals(expected, obfuscator.obfuscateParameter(name, value).toString());
         }
@@ -373,7 +374,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String, StringBuilder)")
-        public void testObfuscateParameterCharSequenceToStringBuilder(String name, String value, String expected) {
+        void testObfuscateParameterCharSequenceToStringBuilder(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseInsensitiveByDefault());
 
             StringBuilder sb = new StringBuilder();
@@ -384,7 +385,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String, StringBuffer)")
-        public void testObfuscateParameterCharSequenceToStringBuffer(String name, String value, String expected) {
+        void testObfuscateParameterCharSequenceToStringBuffer(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseInsensitiveByDefault());
 
             StringBuffer sb = new StringBuffer();
@@ -395,7 +396,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscateParameter(String, String, Appendable)")
-        public void testObfuscateParameterCharSequenceToAppendable(String name, String value, String expected) throws IOException {
+        void testObfuscateParameterCharSequenceToAppendable(String name, String value, String expected) throws IOException {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseInsensitiveByDefault());
 
             Writer writer = new StringWriter();
@@ -406,7 +407,7 @@ public class RequestParameterObfuscatorTest {
         @ParameterizedTest(name = "{0}: {1} -> {2}")
         @MethodSource("testData")
         @DisplayName("obfuscator(String)")
-        public void testObfuscator(String name, String value, String expected) {
+        void testObfuscator(String name, String value, String expected) {
             RequestParameterObfuscator obfuscator = createObfuscator(builder().caseInsensitiveByDefault());
 
             Obfuscated<String> obfuscated = obfuscator.obfuscateParameterValue(name, value);
@@ -427,7 +428,7 @@ public class RequestParameterObfuscatorTest {
     @ParameterizedTest(name = "{1}")
     @MethodSource
     @DisplayName("equals(Object)")
-    public void testEquals(Obfuscator obfuscator, Object object, boolean expected) {
+    void testEquals(Obfuscator obfuscator, Object object, boolean expected) {
         assertEquals(expected, obfuscator.equals(object));
     }
 
@@ -445,7 +446,7 @@ public class RequestParameterObfuscatorTest {
 
     @Test
     @DisplayName("hashCode()")
-    public void testHashCode() {
+    void testHashCode() {
         Obfuscator obfuscator = createObfuscator();
         assertEquals(obfuscator.hashCode(), obfuscator.hashCode());
         assertEquals(obfuscator.hashCode(), createObfuscator().hashCode());
@@ -453,11 +454,11 @@ public class RequestParameterObfuscatorTest {
 
     @Nested
     @DisplayName("Builder")
-    public class BuilderTest {
+    class BuilderTest {
 
         @Test
         @DisplayName("transform")
-        public void testTransform() {
+        void testTransform() {
             Builder builder = builder();
             @SuppressWarnings("unchecked")
             Function<Builder, String> f = mock(Function.class);
