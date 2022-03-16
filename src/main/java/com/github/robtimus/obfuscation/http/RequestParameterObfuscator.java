@@ -17,7 +17,10 @@
 
 package com.github.robtimus.obfuscation.http;
 
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.appendAtMost;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.checkStartAndEnd;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.counting;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.discardAll;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.indexOf;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,6 +37,8 @@ import com.github.robtimus.obfuscation.Obfuscated;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.support.CachingObfuscatingWriter;
 import com.github.robtimus.obfuscation.support.CaseSensitivity;
+import com.github.robtimus.obfuscation.support.CountingReader;
+import com.github.robtimus.obfuscation.support.LimitAppendable;
 import com.github.robtimus.obfuscation.support.MapBuilder;
 
 /**
@@ -49,9 +54,15 @@ public final class RequestParameterObfuscator extends Obfuscator {
     private final Map<String, Obfuscator> obfuscators;
     private final Charset encoding;
 
-    private RequestParameterObfuscator(Builder builder) {
+    private final long limit;
+    private final String truncatedIndicator;
+
+    private RequestParameterObfuscator(ObfuscatorBuilder builder) {
         obfuscators = builder.obfuscators();
         encoding = builder.encoding;
+
+        limit = builder.limit;
+        truncatedIndicator = builder.truncatedIndicator;
     }
 
     @Override
@@ -66,32 +77,50 @@ public final class RequestParameterObfuscator extends Obfuscator {
     public void obfuscateText(CharSequence s, int start, int end, Appendable destination) throws IOException {
         checkStartAndEnd(s, start, end);
 
+        LimitAppendable appendable = appendAtMost(destination, limit);
+        int count = end - start;
+
         int index;
-        while ((index = indexOf(s, '&', start, end)) != -1) {
-            maskKeyValue(s, start, index, destination);
-            destination.append('&');
+        while ((index = indexOf(s, '&', start, end)) != -1 && !appendable.limitExceeded()) {
+            maskKeyValue(s, start, index, appendable);
+            appendable.append('&');
             start = index + 1;
         }
-        // remainder
-        maskKeyValue(s, start, end, destination);
+        if (!appendable.limitExceeded()) {
+            // remainder
+            maskKeyValue(s, start, end, appendable);
+        }
+        if (appendable.limitExceeded() && truncatedIndicator != null) {
+            destination.append(String.format(truncatedIndicator, count));
+        }
     }
 
     @Override
     public void obfuscateText(Reader input, Appendable destination) throws IOException {
-        BufferedReader br = input instanceof BufferedReader ? (BufferedReader) input : new BufferedReader(input);
+        CountingReader reader = counting(input);
+        @SuppressWarnings("resource")
+        BufferedReader br = new BufferedReader(reader);
         StringBuilder sb = new StringBuilder();
+        LimitAppendable appendable = appendAtMost(destination, limit);
         int c;
-        while ((c = br.read()) != -1) {
+        while ((c = br.read()) != -1 && !appendable.limitExceeded()) {
             if (c == '&') {
-                maskKeyValue(sb, 0, sb.length(), destination);
+                maskKeyValue(sb, 0, sb.length(), appendable);
                 sb.delete(0, sb.length());
-                destination.append('&');
+                appendable.append('&');
             } else {
                 sb.append((char) c);
             }
         }
-        // remainder
-        maskKeyValue(sb, 0, sb.length(), destination);
+        if (appendable.limitExceeded()) {
+            discardAll(br);
+        } else {
+            // remainder
+            maskKeyValue(sb, 0, sb.length(), appendable);
+        }
+        if (appendable.limitExceeded() && truncatedIndicator != null) {
+            destination.append(String.format(truncatedIndicator, reader.count()));
+        }
     }
 
     private void maskKeyValue(CharSequence s, int start, int end, Appendable destination) throws IOException {
@@ -194,12 +223,14 @@ public final class RequestParameterObfuscator extends Obfuscator {
         }
         RequestParameterObfuscator other = (RequestParameterObfuscator) o;
         return obfuscators.equals(other.obfuscators)
-                && encoding.equals(other.encoding);
+                && encoding.equals(other.encoding)
+                && limit == other.limit
+                && Objects.equals(truncatedIndicator, other.truncatedIndicator);
     }
 
     @Override
     public int hashCode() {
-        return obfuscators.hashCode() ^ encoding.hashCode();
+        return obfuscators.hashCode() ^ encoding.hashCode() ^ Long.hashCode(limit) ^ Objects.hashCode(truncatedIndicator);
     }
 
     @Override
@@ -208,6 +239,8 @@ public final class RequestParameterObfuscator extends Obfuscator {
         return getClass().getName()
                 + "[obfuscators=" + obfuscators
                 + ",encoding=" + encoding
+                + ",limit=" + limit
+                + ",truncatedIndicator=" + truncatedIndicator
                 + "]";
     }
 
@@ -217,7 +250,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
      * @return A builder that will create {@code RequestParameterObfuscators}.
      */
     public static Builder builder() {
-        return new Builder();
+        return new ObfuscatorBuilder();
     }
 
     /**
@@ -225,16 +258,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
      *
      * @author Rob Spoor
      */
-    public static final class Builder {
-
-        private final MapBuilder<Obfuscator> obfuscators;
-
-        private Charset encoding;
-
-        private Builder() {
-            obfuscators = new MapBuilder<>();
-            encoding = StandardCharsets.UTF_8;
-        }
+    public interface Builder {
 
         /**
          * Adds a parameter to obfuscate.
@@ -247,10 +271,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @throws NullPointerException If the given parameter name or obfuscator is {@code null}.
          * @throws IllegalArgumentException If a parameter with the same name and the same case sensitivity was already added.
          */
-        public Builder withParameter(String parameter, Obfuscator obfuscator) {
-            obfuscators.withEntry(parameter, obfuscator);
-            return this;
-        }
+        Builder withParameter(String parameter, Obfuscator obfuscator);
 
         /**
          * Adds a parameter to obfuscate.
@@ -262,10 +283,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @throws NullPointerException If the given parameter name, obfuscator or case sensitivity is {@code null}.
          * @throws IllegalArgumentException If a parameter with the same name and the same case sensitivity was already added.
          */
-        public Builder withParameter(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
-            obfuscators.withEntry(parameter, obfuscator, caseSensitivity);
-            return this;
-        }
+        Builder withParameter(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity);
 
         /**
          * Sets the default case sensitivity for new parameters to {@link CaseSensitivity#CASE_SENSITIVE}. This is the default setting.
@@ -274,10 +292,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public Builder caseSensitiveByDefault() {
-            obfuscators.caseSensitiveByDefault();
-            return this;
-        }
+        Builder caseSensitiveByDefault();
 
         /**
          * Sets the default case sensitivity for new parameters to {@link CaseSensitivity#CASE_INSENSITIVE}.
@@ -286,10 +301,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public Builder caseInsensitiveByDefault() {
-            obfuscators.caseInsensitiveByDefault();
-            return this;
-        }
+        Builder caseInsensitiveByDefault();
 
         /**
          * Sets the encoding to use. The default is {@link StandardCharsets#UTF_8}.
@@ -298,10 +310,20 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @return This object.
          * @throws NullPointerException If the given encoding mode is {@code null}.
          */
-        public Builder withEncoding(Charset encoding) {
-            this.encoding = Objects.requireNonNull(encoding);
-            return this;
-        }
+        Builder withEncoding(Charset encoding);
+
+        /**
+         * Sets the limit for the obfuscated result.
+         * Note that this limit only applies when obfuscating full request parameter texts, not when obfuscating single parameters using one of the
+         * {@code obfuscateParameter} methods.
+         *
+         * @param limit The limit to use.
+         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
+         *         or continue building {@link RequestParameterObfuscator RequestParameterObfuscators}.
+         * @throws IllegalArgumentException If the given limit is negative.
+         * @since 1.1
+         */
+        LimitConfigurer limitTo(long limit);
 
         /**
          * This method allows the application of a function to this builder.
@@ -312,12 +334,8 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @param f The function to apply.
          * @return The result of applying the function to this builder.
          */
-        public <R> R transform(Function<? super Builder, ? extends R> f) {
+        default <R> R transform(Function<? super Builder, ? extends R> f) {
             return f.apply(this);
-        }
-
-        private Map<String, Obfuscator> obfuscators() {
-            return obfuscators.build();
         }
 
         /**
@@ -325,6 +343,97 @@ public final class RequestParameterObfuscator extends Obfuscator {
          *
          * @return The created {@code RequestParameterObfuscator}.
          */
+        RequestParameterObfuscator build();
+    }
+
+    /**
+     * An object that can be used to configure handling when the obfuscated result exceeds a pre-defined limit.
+     *
+     * @author Rob Spoor
+     * @since 1.1
+     */
+    public interface LimitConfigurer extends Builder {
+
+        /**
+         * Sets the indicator to use when the obfuscated result is truncated due to the limit being exceeded.
+         * There can be one place holder for the total number of characters. Defaults to {@code ... (total: %d)}.
+         * Use {@code null} to omit the indicator.
+         *
+         * @param pattern The pattern to use as indicator.
+         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
+         *         or continue building {@link RequestParameterObfuscator RequestParameterObfuscators}.
+         */
+        LimitConfigurer withTruncatedIndicator(String pattern);
+    }
+
+    private static final class ObfuscatorBuilder implements LimitConfigurer {
+
+        private final MapBuilder<Obfuscator> obfuscators;
+
+        private Charset encoding;
+
+        private long limit;
+        private String truncatedIndicator;
+
+        private ObfuscatorBuilder() {
+            obfuscators = new MapBuilder<>();
+
+            encoding = StandardCharsets.UTF_8;
+
+            limit = Long.MAX_VALUE;
+            truncatedIndicator = "... (total: %d)"; //$NON-NLS-1$
+        }
+
+        @Override
+        public Builder withParameter(String parameter, Obfuscator obfuscator) {
+            obfuscators.withEntry(parameter, obfuscator);
+            return this;
+        }
+
+        @Override
+        public Builder withParameter(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
+            obfuscators.withEntry(parameter, obfuscator, caseSensitivity);
+            return this;
+        }
+
+        @Override
+        public Builder caseSensitiveByDefault() {
+            obfuscators.caseSensitiveByDefault();
+            return this;
+        }
+
+        @Override
+        public Builder caseInsensitiveByDefault() {
+            obfuscators.caseInsensitiveByDefault();
+            return this;
+        }
+
+        @Override
+        public Builder withEncoding(Charset encoding) {
+            this.encoding = Objects.requireNonNull(encoding);
+            return this;
+        }
+
+        @Override
+        public LimitConfigurer limitTo(long limit) {
+            if (limit < 0) {
+                throw new IllegalArgumentException(limit + " < 0"); //$NON-NLS-1$
+            }
+            this.limit = limit;
+            return this;
+        }
+
+        @Override
+        public LimitConfigurer withTruncatedIndicator(String pattern) {
+            this.truncatedIndicator = pattern;
+            return this;
+        }
+
+        private Map<String, Obfuscator> obfuscators() {
+            return obfuscators.build();
+        }
+
+        @Override
         public RequestParameterObfuscator build() {
             return new RequestParameterObfuscator(this);
         }

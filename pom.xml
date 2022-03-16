@@ -62,7 +62,7 @@
   </issueManagement>
 
   <properties>
-    <version.obfuscation-core>1.3</version.obfuscation-core>
+    <version.obfuscation-core>1.4</version.obfuscation-core>
   </properties>
 
   <dependencies>

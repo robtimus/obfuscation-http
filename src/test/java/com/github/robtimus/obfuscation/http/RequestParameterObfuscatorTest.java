@@ -54,47 +54,153 @@ import com.github.robtimus.obfuscation.http.RequestParameterObfuscator.Builder;
 @TestInstance(Lifecycle.PER_CLASS)
 class RequestParameterObfuscatorTest {
 
-    @Test
-    @DisplayName("obfuscateText(CharSequence, int, int)")
-    void testObfuscateTextCharSequence() {
-        String input = "xfoo=bar&hello=world&no-valuey";
-        String expected = "foo=***&hello=world&no-value";
+    @Nested
+    @DisplayName("unlimited")
+    class Unlimited {
 
-        Obfuscator obfuscator = createObfuscator();
+        @Test
+        @DisplayName("obfuscateText(CharSequence, int, int)")
+        void testObfuscateTextCharSequence() {
+            String input = "xfoo=bar&hello=world&empty=&no-valuey";
+            String expected = "foo=***&hello=world&empty=&no-value";
 
-        assertEquals(expected, obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1).toString());
-        assertEquals("foo=**", obfuscator.obfuscateText(input, 1, 7).toString());
-        assertEquals("foo", obfuscator.obfuscateText(input, 1, 4).toString());
+            Obfuscator obfuscator = createObfuscator();
+
+            assertEquals(expected, obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1).toString());
+            assertEquals("foo=**", obfuscator.obfuscateText(input, 1, 7).toString());
+            assertEquals("foo", obfuscator.obfuscateText(input, 1, 4).toString());
+        }
+
+        @Test
+        @DisplayName("obfuscateText(CharSequence, int, int, Appendable)")
+        void testObfuscateTextCharSequenceToAppendable() throws IOException {
+            String input = "xfoo=bar&hello=world&empty=&no-valuey";
+            String expected = "foo=***&hello=world&empty=&no-value";
+
+            Obfuscator obfuscator = createObfuscator();
+
+            StringBuilder destination = new StringBuilder();
+            obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1, (Appendable) destination);
+            assertEquals(expected, destination.toString());
+        }
+
+        @Test
+        @DisplayName("obfuscateText(Reader, Appendable)")
+        void testObfuscateTextReaderToAppendable() throws IOException {
+            String input = "foo=bar&hello=world&empty=&no-value";
+            String expected = "foo=***&hello=world&empty=&no-value";
+
+            Obfuscator obfuscator = createObfuscator();
+
+            StringBuilder destination = new StringBuilder();
+            obfuscator.obfuscateText(new StringReader(input), destination);
+            assertEquals(expected, destination.toString());
+
+            destination.delete(0, destination.length());
+            obfuscator.obfuscateText(new BufferedReader(new StringReader(input)), destination);
+            assertEquals(expected, destination.toString());
+        }
     }
 
-    @Test
-    @DisplayName("obfuscateText(CharSequence, int, int, Appendable)")
-    void testObfuscateTextCharSequenceToAppendable() throws IOException {
-        String input = "xfoo=bar&hello=world&no-valuey";
-        String expected = "foo=***&hello=world&no-value";
+    @Nested
+    @DisplayName("limited")
+    class Limited {
 
-        Obfuscator obfuscator = createObfuscator();
+        @Nested
+        @DisplayName("with truncated indicator")
+        class WithTruncatedIndicator {
 
-        StringBuilder destination = new StringBuilder();
-        obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1, (Appendable) destination);
-        assertEquals(expected, destination.toString());
-    }
+            @Test
+            @DisplayName("obfuscateText(CharSequence, int, int)")
+            void testObfuscateTextCharSequence() {
+                String input = "xfoo=bar&hello=world&empty=&no-valuey";
+                String expected = "foo=***&hell... (total: 35)";
 
-    @Test
-    @DisplayName("obfuscateText(Reader, Appendable)")
-    void testObfuscateTextReaderToAppendable() throws IOException {
-        String input = "foo=bar&hello=world&no-value";
-        String expected = "foo=***&hello=world&no-value";
+                Obfuscator obfuscator = createObfuscator(builder().limitTo(12));
 
-        Obfuscator obfuscator = createObfuscator();
+                assertEquals(expected, obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1).toString());
+                assertEquals("foo=**", obfuscator.obfuscateText(input, 1, 7).toString());
+                assertEquals("foo", obfuscator.obfuscateText(input, 1, 4).toString());
+            }
 
-        StringBuilder destination = new StringBuilder();
-        obfuscator.obfuscateText(new StringReader(input), destination);
-        assertEquals(expected, destination.toString());
+            @Test
+            @DisplayName("obfuscateText(CharSequence, int, int, Appendable)")
+            void testObfuscateTextCharSequenceToAppendable() throws IOException {
+                String input = "xfoo=bar&hello=world&empty=&no-valuey";
+                String expected = "foo=***&hell... (total: 35)";
 
-        destination.delete(0, destination.length());
-        obfuscator.obfuscateText(new BufferedReader(new StringReader(input)), destination);
-        assertEquals(expected, destination.toString());
+                Obfuscator obfuscator = createObfuscator(builder().limitTo(12));
+
+                StringBuilder destination = new StringBuilder();
+                obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1, (Appendable) destination);
+                assertEquals(expected, destination.toString());
+            }
+
+            @Test
+            @DisplayName("obfuscateText(Reader, Appendable)")
+            void testObfuscateTextReaderToAppendable() throws IOException {
+                String input = "foo=bar&hello=world&empty=&no-value";
+                String expected = "foo=***&hell... (total: 35)";
+
+                Obfuscator obfuscator = createObfuscator(builder().limitTo(12));
+
+                StringBuilder destination = new StringBuilder();
+                obfuscator.obfuscateText(new StringReader(input), destination);
+                assertEquals(expected, destination.toString());
+
+                destination.delete(0, destination.length());
+                obfuscator.obfuscateText(new BufferedReader(new StringReader(input)), destination);
+                assertEquals(expected, destination.toString());
+            }
+        }
+
+        @Nested
+        @DisplayName("without truncated indicator")
+        class WithoutTruncatedIndicator {
+
+            @Test
+            @DisplayName("obfuscateText(CharSequence, int, int)")
+            void testObfuscateTextCharSequence() {
+                String input = "xfoo=bar&hello=world&empty=&no-valuey";
+                String expected = "foo=***&hell";
+
+                Obfuscator obfuscator = createObfuscator(builder().limitTo(12).withTruncatedIndicator(null));
+
+                assertEquals(expected, obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1).toString());
+                assertEquals("foo=**", obfuscator.obfuscateText(input, 1, 7).toString());
+                assertEquals("foo", obfuscator.obfuscateText(input, 1, 4).toString());
+            }
+
+            @Test
+            @DisplayName("obfuscateText(CharSequence, int, int, Appendable)")
+            void testObfuscateTextCharSequenceToAppendable() throws IOException {
+                String input = "xfoo=bar&hello=world&empty=&no-valuey";
+                String expected = "foo=***&hell";
+
+                Obfuscator obfuscator = createObfuscator(builder().limitTo(12).withTruncatedIndicator(null));
+
+                StringBuilder destination = new StringBuilder();
+                obfuscator.obfuscateText(input + "&x=y", 1, input.length() - 1, (Appendable) destination);
+                assertEquals(expected, destination.toString());
+            }
+
+            @Test
+            @DisplayName("obfuscateText(Reader, Appendable)")
+            void testObfuscateTextReaderToAppendable() throws IOException {
+                String input = "foo=bar&hello=world&empty=&no-value";
+                String expected = "foo=***&hell";
+
+                Obfuscator obfuscator = createObfuscator(builder().limitTo(12).withTruncatedIndicator(null));
+
+                StringBuilder destination = new StringBuilder();
+                obfuscator.obfuscateText(new StringReader(input), destination);
+                assertEquals(expected, destination.toString());
+
+                destination.delete(0, destination.length());
+                obfuscator.obfuscateText(new BufferedReader(new StringReader(input)), destination);
+                assertEquals(expected, destination.toString());
+            }
+        }
     }
 
     @Nested
@@ -440,6 +546,9 @@ class RequestParameterObfuscatorTest {
                 arguments(obfuscator, createObfuscator(), true),
                 arguments(obfuscator, builder().build(), false),
                 arguments(obfuscator, createObfuscator(StandardCharsets.US_ASCII), false),
+                arguments(obfuscator, createObfuscator(builder().limitTo(Long.MAX_VALUE)), true),
+                arguments(obfuscator, createObfuscator(builder().limitTo(1024)), false),
+                arguments(obfuscator, createObfuscator(builder().limitTo(Long.MAX_VALUE).withTruncatedIndicator(null)), false),
                 arguments(obfuscator, "foo", false),
         };
     }
@@ -455,6 +564,18 @@ class RequestParameterObfuscatorTest {
     @Nested
     @DisplayName("Builder")
     class BuilderTest {
+
+        @Nested
+        @DisplayName("limitTo")
+        class LimitTo {
+
+            @Test
+            @DisplayName("negative limit")
+            void testNegativeLimit() {
+                Builder builder = builder();
+                assertThrows(IllegalArgumentException.class, () -> builder.limitTo(-1));
+            }
+        }
 
         @Test
         @DisplayName("transform")
