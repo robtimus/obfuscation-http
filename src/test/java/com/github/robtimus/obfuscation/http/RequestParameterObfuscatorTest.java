@@ -343,16 +343,18 @@ class RequestParameterObfuscatorTest {
 
             Appendable destination = destinationSupplier.get();
             try (Writer w = obfuscator.streamTo(destination)) {
+                int length = input.length();
+
                 int index = 0;
-                while (index < input.length()) {
-                    int to = Math.min(index + 5, input.length());
+                while (index < length) {
+                    int to = Math.min(index + 5, length);
                     w.append(input, index, to);
                     index = to;
                 }
 
-                assertThrows(IndexOutOfBoundsException.class, () -> w.write(input, 0, input.length() + 1));
-                assertThrows(IndexOutOfBoundsException.class, () -> w.write(input, -1, input.length()));
-                assertThrows(IndexOutOfBoundsException.class, () -> w.write(input, 1, input.length()));
+                assertThrows(IndexOutOfBoundsException.class, () -> w.write(input, 0, length + 1));
+                assertThrows(IndexOutOfBoundsException.class, () -> w.write(input, -1, length));
+                assertThrows(IndexOutOfBoundsException.class, () -> w.write(input, 1, length));
                 assertThrows(IndexOutOfBoundsException.class, () -> w.write(input, 0, -1));
             }
             assertEquals(expected, destination.toString());
