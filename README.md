@@ -11,14 +11,18 @@ Provides functionality for obfuscating HTTP requests and responses. This can be 
 
 To create a request parameter obfuscator, simply create a builder, add parameters to it, and let it build the final obfuscator:
 
-    RequestParameterObfuscator obfuscator = RequestParameterObfuscator.builder()
-            .withParameter("password", Obfuscator.fixedLength(3))
-            .build();
+```java
+RequestParameterObfuscator obfuscator = RequestParameterObfuscator.builder()
+        .withParameter("password", Obfuscator.fixedLength(3))
+        .build();
+```
 
 ## Obfuscating headers
 
 To create a header obfuscator, simply create a builder, add headers to it, and let it build the final obfuscator:
 
-    HeaderObfuscator obfuscator = HeaderObfuscator.builder()
-            .withHeader("authorization", Obfuscator.fixedLength(3))
-            .build();
+```java
+HeaderObfuscator obfuscator = HeaderObfuscator.builder()
+        .withHeader("authorization", Obfuscator.fixedLength(3))
+        .build();
+```
