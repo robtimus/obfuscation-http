@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+/**
+ * Provides functionality for obfuscating HTTP requests and responses.
+ */
 module com.github.robtimus.obfuscation.http {
     requires transitive com.github.robtimus.obfuscation;
 
