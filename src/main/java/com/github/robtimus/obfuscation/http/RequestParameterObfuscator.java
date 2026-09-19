@@ -32,6 +32,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import com.github.robtimus.obfuscation.Obfuscated;
 import com.github.robtimus.obfuscation.Obfuscator;
@@ -51,14 +52,16 @@ import com.github.robtimus.obfuscation.support.MapBuilder;
  */
 public final class RequestParameterObfuscator extends Obfuscator {
 
-    private final Map<String, Obfuscator> obfuscators;
+    private final Map<String, Obfuscator> parameters;
+    private final String parametersRepresentation;
     private final Charset encoding;
 
     private final long limit;
     private final String truncatedIndicator;
 
-    private RequestParameterObfuscator(ObfuscatorBuilder builder) {
-        obfuscators = builder.obfuscators();
+    private RequestParameterObfuscator(Builder builder) {
+        parameters = builder.parameters();
+        parametersRepresentation = builder.parametersRepresentation();
         encoding = builder.encoding;
 
         limit = builder.limit;
@@ -130,7 +133,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
             destination.append(s, start, end);
         } else {
             String name = URLDecoder.decode(s.subSequence(start, index).toString(), encoding.name());
-            Obfuscator obfuscator = obfuscators.get(name);
+            Obfuscator obfuscator = parameters.get(name);
             if (obfuscator == null) {
                 destination.append(s, start, end);
             } else {
@@ -210,7 +213,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
 
     private Obfuscator obfuscator(String name) {
         Objects.requireNonNull(name);
-        return obfuscators.getOrDefault(name, none());
+        return parameters.getOrDefault(name, none());
     }
 
     @Override
@@ -222,7 +225,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
             return false;
         }
         RequestParameterObfuscator other = (RequestParameterObfuscator) o;
-        return obfuscators.equals(other.obfuscators)
+        return parameters.equals(other.parameters)
                 && encoding.equals(other.encoding)
                 && limit == other.limit
                 && Objects.equals(truncatedIndicator, other.truncatedIndicator);
@@ -230,14 +233,14 @@ public final class RequestParameterObfuscator extends Obfuscator {
 
     @Override
     public int hashCode() {
-        return obfuscators.hashCode() ^ encoding.hashCode() ^ Long.hashCode(limit) ^ Objects.hashCode(truncatedIndicator);
+        return parameters.hashCode() ^ encoding.hashCode() ^ Long.hashCode(limit) ^ Objects.hashCode(truncatedIndicator);
     }
 
     @Override
     @SuppressWarnings("nls")
     public String toString() {
         return getClass().getName()
-                + "[obfuscators=" + obfuscators
+                + "[parameters=" + parametersRepresentation
                 + ",encoding=" + encoding
                 + ",limit=" + limit
                 + ",truncatedIndicator=" + truncatedIndicator
@@ -250,7 +253,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
      * @return A builder that will create {@code RequestParameterObfuscators}.
      */
     public static Builder builder() {
-        return new ObfuscatorBuilder();
+        return new Builder();
     }
 
     /**
@@ -258,32 +261,99 @@ public final class RequestParameterObfuscator extends Obfuscator {
      *
      * @author Rob Spoor
      */
-    public interface Builder {
+    public static final class Builder {
+
+        private final MapBuilder<Obfuscator> parameters;
+        private final StringBuilder parametersRepresentation;
+
+        private CaseSensitivity defaultCaseSensitivity;
+
+        private Charset encoding;
+
+        private long limit;
+        private String truncatedIndicator;
+
+        private final ParameterConfigurer parameterConfigurer;
+        private final LimitConfigurer limitConfigurer;
+
+        private Builder() {
+            parameters = new MapBuilder<>();
+            parametersRepresentation = new StringBuilder().append('{');
+
+            defaultCaseSensitivity = CaseSensitivity.CASE_SENSITIVE;
+
+            encoding = StandardCharsets.UTF_8;
+
+            limit = Long.MAX_VALUE;
+            truncatedIndicator = "... (total: %d)"; //$NON-NLS-1$
+
+            parameterConfigurer = new ParameterConfigurer();
+            limitConfigurer = new LimitConfigurer();
+        }
 
         /**
          * Adds a parameter to obfuscate.
-         * This method is an alias for {@link #withParameter(String, Obfuscator, CaseSensitivity)} with the last specified default case sensitivity
-         * using {@link #caseSensitiveByDefault()} or {@link #caseInsensitiveByDefault()}. The default is {@link CaseSensitivity#CASE_SENSITIVE}.
+         * This method is equivalent to calling for {@link #withParameter(String, Obfuscator, Consumer)} with a {@link Consumer} that does nothing.
          *
-         * @param parameter The name of the parameter. It will be treated case sensitively.
+         * @param parameter The name of the parameter.
          * @param obfuscator The obfuscator to use for obfuscating the parameter.
          * @return This object.
          * @throws NullPointerException If the given parameter name or obfuscator is {@code null}.
          * @throws IllegalArgumentException If a parameter with the same name and the same case sensitivity was already added.
          */
-        Builder withParameter(String parameter, Obfuscator obfuscator);
+        public Builder withParameter(String parameter, Obfuscator obfuscator) {
+            addParameter(parameter, obfuscator, null);
+            return this;
+        }
 
         /**
          * Adds a parameter to obfuscate.
+         * This parameter will use the defaults set using {@link #caseSensitiveByDefault()} and {@link #caseInsensitiveByDefault()},
+         * unless explicitly replaced by the given {@link Consumer}.
          *
          * @param parameter The name of the parameter.
          * @param obfuscator The obfuscator to use for obfuscating the parameter.
-         * @param caseSensitivity The case sensitivity for the parameter name.
+         * @param configurer A {@link Consumer} that can be used to update its argument, to override any setting for the parameter.
          * @return This object.
-         * @throws NullPointerException If the given parameter name, obfuscator or case sensitivity is {@code null}.
+         * @throws NullPointerException If the given parameter name, obfuscator or {@link Consumer} is {@code null}.
          * @throws IllegalArgumentException If a parameter with the same name and the same case sensitivity was already added.
+         * @since 2.0
          */
-        Builder withParameter(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity);
+        public Builder withParameter(String parameter, Obfuscator obfuscator, Consumer<ParameterConfigurer> configurer) {
+            Objects.requireNonNull(configurer);
+            addParameter(parameter, obfuscator, configurer);
+            return this;
+        }
+
+        private void addParameter(String parameter, Obfuscator obfuscator, Consumer<ParameterConfigurer> configurer) {
+            Objects.requireNonNull(parameter);
+            Objects.requireNonNull(obfuscator);
+            try {
+                parameterConfigurer.caseSensitivity = defaultCaseSensitivity;
+                if (configurer != null) {
+                    configurer.accept(parameterConfigurer);
+                }
+
+                parameters.withEntry(parameter, obfuscator, parameterConfigurer.caseSensitivity);
+
+                addParameterRepresenation(parameter, obfuscator);
+            } finally {
+                parameterConfigurer.reset();
+            }
+        }
+
+        @SuppressWarnings("nls")
+        private void addParameterRepresenation(String parameter, Obfuscator obfuscator) {
+            if (parametersRepresentation.length() > 1) {
+                parametersRepresentation.append(", ");
+            }
+            parametersRepresentation.append(parameter).append("=[");
+            if (parameterConfigurer.caseSensitivity == CaseSensitivity.CASE_INSENSITIVE) {
+                parametersRepresentation.append("caseInsensitive, ");
+            }
+            parametersRepresentation.append(",obfuscator=").append(obfuscator);
+            parametersRepresentation.append("]");
+        }
 
         /**
          * Sets the default case sensitivity for new parameters to {@link CaseSensitivity#CASE_SENSITIVE}. This is the default setting.
@@ -292,7 +362,10 @@ public final class RequestParameterObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        Builder caseSensitiveByDefault();
+        public Builder caseSensitiveByDefault() {
+            defaultCaseSensitivity = CaseSensitivity.CASE_SENSITIVE;
+            return this;
+        }
 
         /**
          * Sets the default case sensitivity for new parameters to {@link CaseSensitivity#CASE_INSENSITIVE}.
@@ -301,7 +374,10 @@ public final class RequestParameterObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        Builder caseInsensitiveByDefault();
+        public Builder caseInsensitiveByDefault() {
+            defaultCaseSensitivity = CaseSensitivity.CASE_INSENSITIVE;
+            return this;
+        }
 
         /**
          * Sets the encoding to use. The default is {@link StandardCharsets#UTF_8}.
@@ -310,7 +386,10 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @return This object.
          * @throws NullPointerException If the given encoding mode is {@code null}.
          */
-        Builder withEncoding(Charset encoding);
+        public Builder withEncoding(Charset encoding) {
+            this.encoding = Objects.requireNonNull(encoding);
+            return this;
+        }
 
         /**
          * Sets the limit for the obfuscated result.
@@ -318,12 +397,48 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * {@code obfuscateParameter} methods.
          *
          * @param limit The limit to use.
-         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
-         *         or continue building {@link RequestParameterObfuscator RequestParameterObfuscators}.
+         * @return This object.
          * @throws IllegalArgumentException If the given limit is negative.
          * @since 1.1
          */
-        LimitConfigurer limitTo(long limit);
+        public Builder limitTo(long limit) {
+            setLimit(limit, null);
+            return this;
+        }
+
+        /**
+         * Sets the limit for the obfuscated result.
+         * Note that this limit only applies when obfuscating full request parameter texts, not when obfuscating single parameters using one of the
+         * {@code obfuscateParameter} methods.
+         *
+         * @param limit The limit to use.
+         * @param configurer A {@link Consumer} that can be used to update its argument, to set any limit-specific properties.
+         * @return This object.
+         * @throws IllegalArgumentException If the given limit is negative.
+         * @since 2.0
+         */
+        public Builder limitTo(long limit, Consumer<LimitConfigurer> configurer) {
+            Objects.requireNonNull(configurer);
+            setLimit(limit, configurer);
+            return this;
+        }
+
+        private void setLimit(long limit, Consumer<LimitConfigurer> configurer) {
+            if (limit < 0) {
+                throw new IllegalArgumentException(limit + " < 0"); //$NON-NLS-1$
+            }
+            try {
+                limitConfigurer.truncatedIndicator = truncatedIndicator;
+                if (configurer != null) {
+                    configurer.accept(limitConfigurer);
+                }
+
+                this.limit = limit;
+                this.truncatedIndicator = limitConfigurer.truncatedIndicator;
+            } finally {
+                limitConfigurer.reset();
+            }
+        }
 
         /**
          * This method allows the application of a function to this builder.
@@ -334,16 +449,67 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @param f The function to apply.
          * @return The result of applying the function to this builder.
          */
-        default <R> R transform(Function<? super Builder, ? extends R> f) {
+        public <R> R transform(Function<? super Builder, ? extends R> f) {
             return f.apply(this);
         }
 
+        private Map<String, Obfuscator> parameters() {
+            return parameters.build();
+        }
+
+        private String parametersRepresentation() {
+            parametersRepresentation.append('}');
+            String result = parametersRepresentation.toString();
+            parametersRepresentation.deleteCharAt(parametersRepresentation.length() - 1);
+            return result;
+        }
+
         /**
-         * Creates a new {@code RequestParameterObfuscator} with the properties and obfuscators added to this builder.
+         * Creates a new {@code RequestParameterObfuscator} with the parameters and obfuscators added to this builder.
          *
          * @return The created {@code RequestParameterObfuscator}.
          */
-        RequestParameterObfuscator build();
+        public RequestParameterObfuscator build() {
+            return new RequestParameterObfuscator(this);
+        }
+    }
+
+    /**
+     * An object that can be used to configure a parameter that should be obfuscated.
+     *
+     * @author Rob Spoor
+     * @since 2.0
+     */
+    public static final class ParameterConfigurer {
+
+        private CaseSensitivity caseSensitivity;
+
+        private ParameterConfigurer() {
+        }
+
+        /**
+         * Sets the case sensitivity for the parameter to {@link CaseSensitivity#CASE_SENSITIVE}.
+         *
+         * @return This object.
+         */
+        public ParameterConfigurer caseSensitive() {
+            caseSensitivity = CaseSensitivity.CASE_SENSITIVE;
+            return this;
+        }
+
+        /**
+         * Sets the case sensitivity for the parameter to {@link CaseSensitivity#CASE_INSENSITIVE}.
+         *
+         * @return This object.
+         */
+        public ParameterConfigurer caseInsensitive() {
+            caseSensitivity = CaseSensitivity.CASE_INSENSITIVE;
+            return this;
+        }
+
+        private void reset() {
+            caseSensitivity = null;
+        }
     }
 
     /**
@@ -352,7 +518,12 @@ public final class RequestParameterObfuscator extends Obfuscator {
      * @author Rob Spoor
      * @since 1.1
      */
-    public interface LimitConfigurer extends Builder {
+    public static final class LimitConfigurer {
+
+        private String truncatedIndicator;
+
+        private LimitConfigurer() {
+        }
 
         /**
          * Sets the indicator to use when the obfuscated result is truncated due to the limit being exceeded.
@@ -360,82 +531,15 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * Use {@code null} to omit the indicator.
          *
          * @param pattern The pattern to use as indicator.
-         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
-         *         or continue building {@link RequestParameterObfuscator RequestParameterObfuscators}.
+         * @return This object.
          */
-        LimitConfigurer withTruncatedIndicator(String pattern);
-    }
-
-    private static final class ObfuscatorBuilder implements LimitConfigurer {
-
-        private final MapBuilder<Obfuscator> obfuscators;
-
-        private Charset encoding;
-
-        private long limit;
-        private String truncatedIndicator;
-
-        private ObfuscatorBuilder() {
-            obfuscators = new MapBuilder<>();
-
-            encoding = StandardCharsets.UTF_8;
-
-            limit = Long.MAX_VALUE;
-            truncatedIndicator = "... (total: %d)"; //$NON-NLS-1$
-        }
-
-        @Override
-        public Builder withParameter(String parameter, Obfuscator obfuscator) {
-            obfuscators.withEntry(parameter, obfuscator);
-            return this;
-        }
-
-        @Override
-        public Builder withParameter(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
-            obfuscators.withEntry(parameter, obfuscator, caseSensitivity);
-            return this;
-        }
-
-        @Override
-        public Builder caseSensitiveByDefault() {
-            obfuscators.caseSensitiveByDefault();
-            return this;
-        }
-
-        @Override
-        public Builder caseInsensitiveByDefault() {
-            obfuscators.caseInsensitiveByDefault();
-            return this;
-        }
-
-        @Override
-        public Builder withEncoding(Charset encoding) {
-            this.encoding = Objects.requireNonNull(encoding);
-            return this;
-        }
-
-        @Override
-        public LimitConfigurer limitTo(long limit) {
-            if (limit < 0) {
-                throw new IllegalArgumentException(limit + " < 0"); //$NON-NLS-1$
-            }
-            this.limit = limit;
-            return this;
-        }
-
-        @Override
         public LimitConfigurer withTruncatedIndicator(String pattern) {
             this.truncatedIndicator = pattern;
             return this;
         }
 
-        private Map<String, Obfuscator> obfuscators() {
-            return obfuscators.build();
-        }
-
-        @Override
-        public RequestParameterObfuscator build() {
-            return new RequestParameterObfuscator(this);
+        private void reset() {
+            this.truncatedIndicator = null;
         }
     }
 }
