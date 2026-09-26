@@ -273,6 +273,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
         private long limit;
         private String truncatedIndicator;
 
+        private final ParameterConfigurer parameterConfigurer;
         private final LimitConfigurer limitConfigurer;
 
         private Builder() {
@@ -286,13 +287,13 @@ public final class RequestParameterObfuscator extends Obfuscator {
             limit = Long.MAX_VALUE;
             truncatedIndicator = "... (total: %d)"; //$NON-NLS-1$
 
+            parameterConfigurer = new ParameterConfigurer();
             limitConfigurer = new LimitConfigurer();
         }
 
         /**
          * Adds a parameter to obfuscate.
-         * This method is an alias for {@link #withParameter(String, Obfuscator, CaseSensitivity)} with the last specified default case sensitivity
-         * using {@link #caseSensitiveByDefault()} or {@link #caseInsensitiveByDefault()}. The default is {@link CaseSensitivity#CASE_SENSITIVE}.
+         * This method is equivalent to calling for {@link #withParameter(String, Obfuscator, Consumer)} with a {@link Consumer} that does nothing.
          *
          * @param parameter The name of the parameter.
          * @param obfuscator The obfuscator to use for obfuscating the parameter.
@@ -301,38 +302,53 @@ public final class RequestParameterObfuscator extends Obfuscator {
          * @throws IllegalArgumentException If a parameter with the same name and the same case sensitivity was already added.
          */
         public Builder withParameter(String parameter, Obfuscator obfuscator) {
-            return withParameter(parameter, obfuscator, defaultCaseSensitivity);
+            addParameter(parameter, obfuscator, null);
+            return this;
         }
 
         /**
          * Adds a parameter to obfuscate.
+         * This parameter will use the defaults set using {@link #caseSensitiveByDefault()} and {@link #caseInsensitiveByDefault()},
+         * unless explicitly replaced by the given {@link Consumer}.
          *
          * @param parameter The name of the parameter.
          * @param obfuscator The obfuscator to use for obfuscating the parameter.
-         * @param caseSensitivity The case sensitivity for the parameter name.
+         * @param configurer A {@link Consumer} that can be used to update its argument, to override any setting for the parameter.
          * @return This object.
-         * @throws NullPointerException If the given parameter name, obfuscator or case sensitivity is {@code null}.
+         * @throws NullPointerException If the given parameter name, obfuscator or {@link Consumer} is {@code null}.
          * @throws IllegalArgumentException If a parameter with the same name and the same case sensitivity was already added.
+         * @since 2.0
          */
-        public Builder withParameter(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
-            Objects.requireNonNull(parameter);
-            Objects.requireNonNull(obfuscator);
-            Objects.requireNonNull(caseSensitivity);
-
-            parameters.withEntry(parameter, obfuscator, caseSensitivity);
-
-            addParameterRepresenation(parameter, obfuscator, caseSensitivity);
-
+        public Builder withParameter(String parameter, Obfuscator obfuscator, Consumer<ParameterConfigurer> configurer) {
+            Objects.requireNonNull(configurer);
+            addParameter(parameter, obfuscator, configurer);
             return this;
         }
 
+        private void addParameter(String parameter, Obfuscator obfuscator, Consumer<ParameterConfigurer> configurer) {
+            Objects.requireNonNull(parameter);
+            Objects.requireNonNull(obfuscator);
+            try {
+                parameterConfigurer.caseSensitivity = defaultCaseSensitivity;
+                if (configurer != null) {
+                    configurer.accept(parameterConfigurer);
+                }
+
+                parameters.withEntry(parameter, obfuscator, parameterConfigurer.caseSensitivity);
+
+                addParameterRepresenation(parameter, obfuscator);
+            } finally {
+                parameterConfigurer.reset();
+            }
+        }
+
         @SuppressWarnings("nls")
-        private void addParameterRepresenation(String parameter, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
+        private void addParameterRepresenation(String parameter, Obfuscator obfuscator) {
             if (parametersRepresentation.length() > 1) {
                 parametersRepresentation.append(", ");
             }
             parametersRepresentation.append(parameter).append("=[");
-            if (caseSensitivity == CaseSensitivity.CASE_INSENSITIVE) {
+            if (parameterConfigurer.caseSensitivity == CaseSensitivity.CASE_INSENSITIVE) {
                 parametersRepresentation.append("caseInsensitive, ");
             }
             parametersRepresentation.append(",obfuscator=").append(obfuscator);
@@ -455,6 +471,44 @@ public final class RequestParameterObfuscator extends Obfuscator {
          */
         public RequestParameterObfuscator build() {
             return new RequestParameterObfuscator(this);
+        }
+    }
+
+    /**
+     * An object that can be used to configure a parameter that should be obfuscated.
+     *
+     * @author Rob Spoor
+     * @since 2.0
+     */
+    public static final class ParameterConfigurer {
+
+        private CaseSensitivity caseSensitivity;
+
+        private ParameterConfigurer() {
+        }
+
+        /**
+         * Sets the case sensitivity for the parameter to {@link CaseSensitivity#CASE_SENSITIVE}.
+         *
+         * @return This object.
+         */
+        public ParameterConfigurer caseSensitive() {
+            caseSensitivity = CaseSensitivity.CASE_SENSITIVE;
+            return this;
+        }
+
+        /**
+         * Sets the case sensitivity for the parameter to {@link CaseSensitivity#CASE_INSENSITIVE}.
+         *
+         * @return This object.
+         */
+        public ParameterConfigurer caseInsensitive() {
+            caseSensitivity = CaseSensitivity.CASE_INSENSITIVE;
+            return this;
+        }
+
+        private void reset() {
+            caseSensitivity = null;
         }
     }
 
