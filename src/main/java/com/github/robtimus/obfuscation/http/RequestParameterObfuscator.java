@@ -351,7 +351,7 @@ public final class RequestParameterObfuscator extends Obfuscator {
             if (parameterConfigurer.caseSensitivity == CaseSensitivity.CASE_INSENSITIVE) {
                 parametersRepresentation.append("caseInsensitive, ");
             }
-            parametersRepresentation.append(",obfuscator=").append(obfuscator);
+            parametersRepresentation.append("obfuscator=").append(obfuscator);
             parametersRepresentation.append("]");
         }
 
